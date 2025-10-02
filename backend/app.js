@@ -10,7 +10,7 @@ dbConnect();
 
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://your-frontend-domain.com", // Replace with your deployed URL
+  "https://yojana-finder-rho.vercel.app", // Replace with your deployed URL
 ];
 
 app.use(

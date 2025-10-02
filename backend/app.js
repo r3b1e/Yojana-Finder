@@ -8,14 +8,27 @@ const cors = require("cors");
 const app = express();
 dbConnect();
 
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://your-frontend-domain.com", // Replace with your deployed URL
+];
+
 app.use(
   cors({
-    origin: "http://localhost:5173" || "*", // Allows requests from frontend URL
-    methods: ["GET", "POST", "PUT", "DELETE"], // Permitted HTTP methods
-    allowedHeaders: ["Content-Type", "Authorization"], // Headers for JSON & JWT
+    origin: function (origin, callback) {
+      // Allow requests with no origin like curl or Postman
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) === -1) {
+        return callback(new Error(`Origin ${origin} not allowed by CORS`));
+      }
+      return callback(null, true);
+    },
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
+
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

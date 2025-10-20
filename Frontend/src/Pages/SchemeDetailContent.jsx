@@ -29,6 +29,8 @@ export function SchemeDetailContent() {
 
  const [scheme, setScheme] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [schemeCards, setSchemeCards] = useState([]);
+  const [isSaved, setisSaved] = useState(false);
    const [tab, setTab] = useState("overview");
 
   const getDataBySlug = async() => {
@@ -47,6 +49,8 @@ export function SchemeDetailContent() {
     }
   }
 
+
+
   useEffect(() => {
     if (location.state?.scheme) {
       setScheme(location.state.scheme);
@@ -56,6 +60,16 @@ export function SchemeDetailContent() {
     }
   }, [location.state?.scheme]); // Dependency array ensures this runs when state changes
 
+  useEffect(() => {
+    const storedCards = JSON.parse(localStorage.getItem("Schemes")) || [];
+    storedCards.forEach(element => {
+      if(element._id === scheme?._id){
+        setisSaved(true);
+      }
+    });
+    setSchemeCards(storedCards);
+    console.log(storedCards)
+  }, [scheme])
     // --- Render Logic ---
 
   if (loading) {
@@ -77,6 +91,25 @@ export function SchemeDetailContent() {
 
   // Simple Tabs implementation
  
+  const handleSave = () => {
+
+    if(!isSaved){
+      console.log("hello");
+    const allSaved = [...schemeCards, scheme]
+    setSchemeCards(allSaved);
+    localStorage.setItem("Schemes", JSON.stringify(allSaved));
+    setisSaved(true);
+    }
+    else{
+      const allSaved = schemeCards.filter((ele) => {
+        return ele._id !==scheme._id;
+      })
+      setSchemeCards(allSaved)
+      localStorage.setItem("Schemes", JSON.stringify(allSaved));
+      setisSaved(false);
+    }
+    
+  }
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -139,7 +172,7 @@ export function SchemeDetailContent() {
           <button className="rounded border px-3 py-1 flex items-center gap-2 text-sm hover:bg-muted">
             <Share2 className="h-4 w-4" />Share
           </button>
-          <button className="rounded border px-3 py-1 flex items-center gap-2 text-sm hover:bg-muted">
+          <button onClick={() => handleSave()} className={`rounded border px-3 py-1 flex items-center gap-2 text-sm ${isSaved ? "bg-primary text-primary-foreground cursor-pointer" : "cursor-pointer hover:bg-muted"}`}>
             <Bookmark className="h-4 w-4" />Save
           </button>
           {/* <button className="rounded bg-primary px-8 py-2 text-primary-foreground flex items-center gap-2 text-sm">

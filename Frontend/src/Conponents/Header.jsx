@@ -1,4 +1,4 @@
-import { Search, Menu } from "lucide-react";
+import { Search, Menu, Bookmark} from "lucide-react";
 import { Link } from "react-router-dom";
 
 export function Header() {
@@ -34,23 +34,29 @@ export function Header() {
             >
               Categories
             </a>
-            <a
-              href="#"
+            <Link
+              to="/about"
               className="text-muted-foreground transition-colors hover:text-foreground"
             >
               About
-            </a>
-            <a
-              href="#"
+            </Link>
+            <Link
+              to="/help"
               className="text-muted-foreground transition-colors hover:text-foreground"
             >
               Help
-            </a>
+            </Link>
           </nav>
 
           {/* Action Buttons */}
           <div className="flex items-center space-x-4">
             {/* Search Button (Ghost Style) */}
+            <Link to="/saved">
+              <button className="inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-3 text-foreground hover:bg-accent hover:text-accent-foreground">
+                <Bookmark className="h-4 w-4 mr-2" />
+                Saved
+              </button>
+            </Link>
             <Link to="/search" className="hidden sm:flex">
               <button className="inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-3 text-foreground hover:bg-accent hover:text-accent-foreground">
                 <Search className="mr-2 h-4 w-4" />

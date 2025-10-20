@@ -4,13 +4,103 @@ import { Footer } from "../Conponents/Footer";
 import { AdvancedFilters } from "../Conponents/AdvancedFilters";
 import { SchemeCard } from "../Conponents/SchemeCard";
 import { sampleScheme } from "../lib/sample-scheme";
-import { ArrowUpDown, Grid, List, TrendingUp } from "lucide-react";
+import { ArrowUpDown, Grid, List, TrendingUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { useSelector } from "react-redux";
 import axios from "axios"
 import { baseUrl } from "../lib/base";
 import { Loader } from "../Conponents/Loader";
 import { useNavigate, useLocation } from "react-router-dom";
-// import { schema } from "../../../backend/src/models/schemeSchema";
+
+// Pagination Component
+function Pagination({ currentPage, totalPages, onPageChange }) {
+  const getPageNumbers = () => {
+    const pages = [];
+    const showEllipsis = totalPages > 7;
+    
+    if (!showEllipsis) {
+      for (let i = 0; i < totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage < 3) {
+        for (let i = 0; i < 5; i++) pages.push(i);
+        pages.push('ellipsis');
+        pages.push(totalPages - 1);
+      } else if (currentPage > totalPages - 4) {
+        pages.push(0);
+        pages.push('ellipsis');
+        for (let i = totalPages - 5; i < totalPages; i++) pages.push(i);
+      } else {
+        pages.push(0);
+        pages.push('ellipsis');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+        pages.push('ellipsis');
+        pages.push(totalPages - 1);
+      }
+    }
+    
+    return pages;
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handlePageChange = (newPage) => {
+    onPageChange(newPage);
+    scrollToTop();
+  };
+
+  if (totalPages <= 1) return null;
+
+  return (
+    <div className="flex items-center justify-center gap-2 mt-8">
+      <button
+        onClick={() => handlePageChange(currentPage - 1)}
+        disabled={currentPage === 0}
+        className="flex items-center gap-1 px-3 py-2 rounded border border-input bg-background hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        <ChevronLeft className="h-4 w-4" />
+        <span className="hidden sm:inline">Previous</span>
+      </button>
+
+      <div className="flex items-center gap-1">
+        {getPageNumbers().map((pageNum, idx) => {
+          if (pageNum === 'ellipsis') {
+            return (
+              <span key={`ellipsis-${idx}`} className="px-2 py-2 text-muted-foreground">
+                ...
+              </span>
+            );
+          }
+          
+          return (
+            <button
+              key={pageNum}
+              onClick={() => handlePageChange(pageNum)}
+              className={`min-w-[40px] px-3 py-2 rounded transition-colors ${
+                currentPage === pageNum
+                  ? 'bg-primary text-primary-foreground font-semibold'
+                  : 'border border-input bg-background hover:bg-accent hover:text-accent-foreground'
+              }`}
+            >
+              {pageNum + 1}
+            </button>
+          );
+        })}
+      </div>
+
+      <button
+        onClick={() => handlePageChange(currentPage + 1)}
+        disabled={currentPage === totalPages - 1}
+        className="flex items-center gap-1 px-3 py-2 rounded border border-input bg-background hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        <span className="hidden sm:inline">Next</span>
+        <ChevronRight className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
 
 export function SearchPage() {
   const location = useLocation()
@@ -28,110 +118,43 @@ export function SearchPage() {
     sortOrder: "desc",
   });
   const [page, setPage] = useState(0);
+  const [itemsPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
 
   const allCategoryData = useSelector(store => store.dashData.items)
 
-  
-  // console.log(allCategoryData, "-<")
-
   const [filteredSchemes, setFilteredSchemes] = useState([allCategoryData.all]);
-  const [viewMode, setViewMode] = useState("grid"); // "grid" or "list"
+  const [viewMode, setViewMode] = useState("grid");
   const [actualSchemes, setActualSchemes] = useState([]);
 
-
-  
-
-  // const categoryOptions = [
-  //   { value: "Agriculture", label: "Agriculture", count: 45 },
-  //   { value: "Rural & Environment", label: "Rural & Environment", count: 32 },
-  //   { value: "Social welfare & Empowerment", label: "Social Welfare & Empowerment", count: 67 },
-  //   { value: "Education", label: "Education", count: 28 },
-  //   { value: "Healthcare", label: "Healthcare", count: 41 },
-  //   { value: "Employment", label: "Employment", count: 35 },
-  //   { value: "Housing", label: "Housing", count: 22 },
-  //   { value: "Women & Child Development", label: "Women & Child Development", count: 38 },
-  // ];
-
-  // const tagOptions = [
-  //   { value: "Financial Assistance", label: "Financial Assistance", count: 89 },
-  //   { value: "Farmer", label: "Farmer", count: 45 },
-  //   { value: "Relief", label: "Relief", count: 23 },
-  //   { value: "Income Support", label: "Income Support", count: 34 },
-  //   { value: "Scholarship", label: "Scholarship", count: 28 },
-  //   { value: "Healthcare", label: "Healthcare", count: 41 },
-  //   { value: "Employment", label: "Employment", count: 35 },
-  //   { value: "Housing", label: "Housing", count: 22 },
-  //   { value: "Women", label: "Women", count: 38 },
-  //   { value: "Child", label: "Child", count: 25 },
-  //   { value: "Elderly", label: "Elderly", count: 18 },
-  //   { value: "Disability", label: "Disability", count: 15 },
-  // ];
-
-  // const fetchSchemes = async () => {
-  //   try{
-
-  //     const res = await axios(baseUrl + "/scheme/requestschemes",{
-        
-  //     }, {
-  //       withCredentials: true
-  //     })
-
-  //   }catch(error){
-  //     console.error(error);
-  //   }
-  // }
-
-
   const fetchSchemes = async () => {
-    // 1. Define the data array clearly
+    const startIndex = page * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
     const requestData = {
-        // filteredSchemes: [
-        //     "68d80382b0a881721ee22b24",
-        //     "68d8eeee08fef1dd950a87e5",
-        //     "68d8eeee08fef1dd950a87e9",
-        //     "68d8eeee08fef1dd950a87f0",
-        //     "68d90178b6692fb8cdba9846",
-        //     "68d90178b6692fb8cdba9847",
-        //     "68d90178b6692fb8cdba9850",
-        //     "68d90178b6692fb8cdba9851",
-        //     "68d90178b6692fb8cdba9856",
-        //     "68d90178b6692fb8cdba9857",
-        //     "68d90178b6692fb8cdba9861",
-        //     "68d90178b6692fb8cdba9862",
-        //     "68d90178b6692fb8cdba9865",
-        //     "68d90178b6692fb8cdba9867",
-        //     "68d90178b6692fb8cdba9869",
-        //     "कृषि",
-        //     "ग्रामीण और पर्यावरण"
-        // ],
-        filteredSchemes: filteredSchemes.slice(page, page+10),
+        filteredSchemes: filteredSchemes.slice(startIndex, endIndex),
     };
 
     try {
-        // Use axios.post(url, data, config)
         const res = await axios.post(
             baseUrl + "/scheme/requestschemes", 
-            requestData,                      // <-- 2nd argument: The data (req.body)
-            {                                 // <-- 3rd argument: The config object
+            requestData,
+            {
                 withCredentials: true
             }
         );
         
-        // Handle the successful response here, e.g., set data to state
         console.log(res.data, "this is response");
-        // setActualSchemes([]);
         setActualSchemes(res.data);
 
     } catch(error) {
         console.error("Error fetching schemes:", error);
     }
-}
+  }
 
   useEffect(() => {
     console.log(filteredSchemes)
     fetchSchemes()
-
-  }, [filteredSchemes])
+  }, [filteredSchemes, page])
 
   useEffect(() => {
     let filtered = [sampleScheme];
@@ -171,10 +194,9 @@ export function SearchPage() {
         return true;
       });
     }
+
     //Mycode ===================================================================
-    
     let filteredArray = [...allCategoryData["all"]];
-    // console.log(filteredArray, "filtered")
 
     if(filters.categories.length > 0){
       filters.categories.forEach((element) => {
@@ -195,77 +217,45 @@ export function SearchPage() {
         const requiredScheme = allCategoryData.tags[element].filter((schemeId) => filteredArray.includes(schemeId));
         filteredArray = requiredScheme;
       })
-      
     }
-    // console.log(filteredArray, "final");
 
     const set = new Set(filteredArray);
 
-// **CORRECTION:** Check the length of the categories array
-if (filters.categories && filters.categories.length > 0) {
-    filters.categories.forEach((element) => {
-        // 'element' is the category name/ID, e.g., 'Electronics'
-        // console.log("1");
-        // **ASSUMPTION:** allCategoryData.category[element] is an array of items
-        if (allCategoryData.category[element]) { 
-            allCategoryData.category[element].forEach((ele) => {
-              // if(typeof ele === "number"){
-                set.add(ele);
-            });
-        }
-    });
-}
+    if (filters.categories && filters.categories.length > 0) {
+        filters.categories.forEach((element) => {
+            if (allCategoryData.category[element]) { 
+                allCategoryData.category[element].forEach((ele) => {
+                    set.add(ele);
+                });
+            }
+        });
+    }
 
-if (filters.level && filters.level.length > 0) {
-    filters.level.forEach((element) => {
-        // 'element' is the category name/ID, e.g., 'Electronics'
-        // console.log("2")
-        // **ASSUMPTION:** allCategoryData.category[element] is an array of items
-        if (allCategoryData.level[element]) { 
-            allCategoryData.level[element].forEach((ele) => {
-              // if(typeof ele === "number")
-                set.add(ele);
-            });
-        }
-    });
-}
+    if (filters.level && filters.level.length > 0) {
+        filters.level.forEach((element) => {
+            if (allCategoryData.level[element]) { 
+                allCategoryData.level[element].forEach((ele) => {
+                    set.add(ele);
+                });
+            }
+        });
+    }
 
-if (filters.tags && filters.tags.length > 0) {
-    filters.tags.forEach((element) => {
-        // 'element' is the category name/ID, e.g., 'Electronics'
-        // console.log("3")
-        // **ASSUMPTION:** allCategoryData.category[element] is an array of items
-        if (allCategoryData.tags[element]) { 
-            allCategoryData.tags[element].forEach((ele) => {
-              // if(typeof ele === "number")
-                set.add(ele);
-            });
-        }
-    });
-}
+    if (filters.tags && filters.tags.length > 0) {
+        filters.tags.forEach((element) => {
+            if (allCategoryData.tags[element]) { 
+                allCategoryData.tags[element].forEach((ele) => {
+                    set.add(ele);
+                });
+            }
+        });
+    }
 
-
-    // console.log(set, "this is set")
-
-
-    // ==========================================================================
-    // Simplified benefit amount filtering removed for brevity
-
-    // if (filters.sortBy === "name") {
-    //   filtered.sort((a, b) => {
-    //     const c = a.scheme_name[filters.language].localeCompare(b.scheme_name[filters.language]);
-    //     return filters.sortOrder === "asc" ? c : -c;
-    //   });
-    // } else if (filters.sortBy === "updated") {
-    //   filtered.sort((a, b) => {
-    //     const c = new Date(a.updatedAt) - new Date(b.updatedAt);
-    //     return filters.sortOrder === "asc" ? c : -c;
-    //   });
-    // }
     setActualSchemes([]);
-    const myFinalAarray = [...set]
-    setFilteredSchemes(myFinalAarray);
-    // console.log(filteredSchemes)
+    const myFinalArray = [...set]
+    setFilteredSchemes(myFinalArray);
+    setTotalPages(Math.ceil(myFinalArray.length / itemsPerPage));
+    setPage(0);
   }, [filters]);
 
   const handleSortChange = (value) => {
@@ -275,8 +265,6 @@ if (filters.tags && filters.tags.length > 0) {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* <Header /> */}
-
       <main className="container mx-auto flex-grow px-4 py-8 sm:px-6 lg:px-8">
         <h1 className="mb-2 text-3xl font-bold">Search Government Schemes</h1>
         <p className="mb-8 text-muted-foreground">
@@ -325,11 +313,19 @@ if (filters.tags && filters.tags.length > 0) {
             </div>
 
             {actualSchemes.length > 0 ? (
-              <div className={viewMode === "grid" ? "grid grid-cols-1 gap-6 md:grid-cols-2" : "space-y-4"}>
-                {actualSchemes.map((scheme) => (
-                  <SchemeCard key={scheme._id} scheme={scheme} language={filters.language} />
-                ))}
-              </div>
+              <>
+                <div className={viewMode === "grid" ? "grid grid-cols-1 gap-6 md:grid-cols-2" : "space-y-4"}>
+                  {actualSchemes.map((scheme) => (
+                    <SchemeCard key={scheme._id} scheme={scheme} language={filters.language} />
+                  ))}
+                </div>
+                
+                <Pagination 
+                  currentPage={page}
+                  totalPages={totalPages}
+                  onPageChange={setPage}
+                />
+              </>
             ) : (
               <div className="py-12 text-center text-muted-foreground">
                 <Loader />
@@ -340,8 +336,6 @@ if (filters.tags && filters.tags.length > 0) {
           </div>
         </div>
       </main>
-
-      {/* <Footer /> */}
     </div>
   );
 }

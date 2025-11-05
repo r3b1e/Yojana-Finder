@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Filter,
@@ -7,15 +7,15 @@ import {
   ChevronUp,
   CalendarIcon,
   RotateCcw,
+  Search,
+  Loader,
   SlidersHorizontal,
 } from "lucide-react";
 import { format } from "date-fns";
+import { baseUrl } from "../lib/base";
+import axios from "axios";
 
-export function AdvancedFilters({
-  filters,
-  onFiltersChange,
-  onSearch,
-}) {
+export function AdvancedFilters({ filters, onFiltersChange, onSearch }) {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [openSections, setOpenSections] = useState({
     categories: true,
@@ -23,8 +23,32 @@ export function AdvancedFilters({
     level: true,
     dateRange: false,
   });
+  const search = useRef(null);
   const categoryData = useSelector((store) => store.dashData.items);
-  console.log(categoryData);
+  const [searchValue, setSearchValue] = useState("");
+  const [cursorerror, setCorsorerror] = useState(false);
+  // console.log(categoryData);
+
+  const handleSearch = async () => {
+    // console.log(searchValue);
+    setCorsorerror(true); // not sure why you set it before API call, maybe intended?
+
+    try {
+      const res = await axios.get(baseUrl + "/scheme/search/query", {
+        params: { query: searchValue },
+        withCredentials: true,
+      });
+      const data = await res.data;
+      // console.log(data);
+      if (res.data) {
+        setCorsorerror(false); // maybe false on success?
+        onFiltersChange({ ...filters, search: searchValue });
+        onFiltersChange({ ...filters, searchArray: [...data.Id] });
+      }
+    } catch (err) {
+      console.error("Error fetching schemes:", err);
+    }
+  };
 
   const toggleSection = (section) => {
     setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
@@ -36,7 +60,7 @@ export function AdvancedFilters({
       ? [...currentValues, value]
       : currentValues.filter((v) => v !== value);
     onFiltersChange({ ...filters, [filterType]: newValues });
-    console.log(filters)
+    // console.log(filters);
   };
 
   const handleDateRangeChange = (field, date) => {
@@ -77,15 +101,43 @@ export function AdvancedFilters({
   return (
     <div className="space-y-6">
       {/* Search Input */}
-      <input
-        type="text"
-        placeholder="Search..."
-        value={filters.search}
-        onChange={(e) =>
-          onFiltersChange({ ...filters, search: e.target.value })
-        }
-        className="w-full rounded-md border border-gray-300 p-2 text-sm"
-      />
+      <div className="relative flex items-center w-full">
+        <input
+          type="text"
+          placeholder="Search..."
+          value={searchValue}
+          onChange={(e) => setSearchValue(e.target.value)}
+          className="w-full rounded-md border border-gray-300 p-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+
+        {/* Clear Button */}
+        {searchValue && (
+          <button
+            onClick={() => {
+              setSearchValue("");
+              onFiltersChange({ ...filters, search: "" });
+              onFiltersChange({ ...filters, searchArray: [] })
+            }}
+            className="absolute right-10 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
+            title="Clear"
+          >
+            {!cursorerror ? (
+              <X size={20} />
+            ) : (
+              <Loader className="animate-spin text-primary" size={24} />
+            )}
+          </button>
+        )}
+
+        {/* Search Button */}
+        <button
+          onClick={() => handleSearch()}
+          className="cursor-pointer absolute right-1 top-1/2 -translate-y-1/2 rounded-md bg-blue-500 p-2 text-white hover:bg-blue-600 transition-colors"
+          title="Search"
+        >
+          <Search size={18} />
+        </button>
+      </div>
 
       {/* Quick Filters */}
       <div className="flex flex-wrap gap-2">
@@ -173,24 +225,26 @@ export function AdvancedFilters({
                   </span>
                 </label>
               ))} */}
-              {Object.entries(categoryData.category).map(([key, value], inx) => (
-                <label key={inx} className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={filters.categories.includes(key)}
-                    onChange={(e) =>
-                      handleCheckboxChange(
-                        "categories",
-                        key,
-                        e.target.checked
-                      )
-                    }
-                  />
-                  <span>
-                    {key} ({value.length})
-                  </span>
-                </label>
-              ))}
+              {Object.entries(categoryData.category).map(
+                ([key, value], inx) => (
+                  <label key={inx} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={filters.categories.includes(key)}
+                      onChange={(e) =>
+                        handleCheckboxChange(
+                          "categories",
+                          key,
+                          e.target.checked
+                        )
+                      }
+                    />
+                    <span>
+                      {key} ({value.length})
+                    </span>
+                  </label>
+                )
+              )}
             </div>
           )}
         </div>
@@ -224,26 +278,20 @@ export function AdvancedFilters({
                   </span>
                 </label>
               ))} */}
-              {
-                Object.entries(categoryData.level).map(([key, value], inx)=>(
-                  <label key={inx} className="flex items-center gap-2">
+              {Object.entries(categoryData.level).map(([key, value], inx) => (
+                <label key={inx} className="flex items-center gap-2">
                   <input
                     type="checkbox"
                     checked={filters.level.includes(key)}
                     onChange={(e) =>
-                      handleCheckboxChange(
-                        "level",
-                        key,
-                        e.target.checked
-                      )
+                      handleCheckboxChange("level", key, e.target.checked)
                     }
                   />
                   <span>
                     {key} Government ({value.length})
                   </span>
                 </label>
-                ))
-                }
+              ))}
             </div>
           )}
         </div>
@@ -258,18 +306,13 @@ export function AdvancedFilters({
           </button>
           {openSections.tags && (
             <div className="max-h-40 overflow-auto mt-2">
-              
               {Object.entries(categoryData.tags).map(([key, value], inx) => (
                 <label key={inx} className="flex items-center gap-2">
                   <input
                     type="checkbox"
                     checked={filters.tags.includes(key)}
                     onChange={(e) =>
-                      handleCheckboxChange(
-                        "tags",
-                        key,
-                        e.target.checked
-                      )
+                      handleCheckboxChange("tags", key, e.target.checked)
                     }
                   />
                   <span>

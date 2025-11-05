@@ -3,6 +3,146 @@ const fs = require("fs");
 const csv = require("csv-parser");
 const mongoose = require("mongoose");
 
+// const searchSchemes = async (req, res) => {
+//   try {
+//     const reply = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+//       method: "POST",
+//       headers: {
+//         "Authorization": "Bearer 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",
+//         "HTTP-Referer": "<YOUR_SITE_URL>",
+//         "X-Title": "<YOUR_SITE_NAME>",
+//         "Content-Type": "application/json",
+//       },
+//       body: JSON.stringify({
+//         model: "minimax/minimax-m2:free",
+//         messages: [
+//           { role: "user", content: "What is the meaning of life?" },
+//         ],
+//       }),
+//     });
+
+//     // ✅ Parse the JSON body
+//     const data = await reply.json();
+
+//     console.log(data);
+//     res.json(data); // ✅ Send the actual JSON data to the client
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({
+//       message: "Error while searching scheme",
+//       error: error.message,
+//     });
+//   }
+// };
+
+const searchSchemes = async (req, res) => {
+  try {
+    const { query } = req.query;
+    if (!query) return res.status(400).json({ message: "User query required" });
+
+    // 1️⃣ Load CSV file and parse rows
+    const schemes = [];
+    fs.createReadStream("updated_data.csv")
+      .pipe(csv())
+      .on("data", (row) => {
+        schemes.push(row);
+      })
+      .on("end", async () => {
+        console.log(`Loaded ${schemes.length} schemes from CSV`);
+
+        // 2️⃣ Build a clean text context for the LLM
+        const contextText = schemes
+          .map(
+            (s) => `
+Scheme: ${s.scheme_name}
+Slug: ${s.slug}
+Details: ${s.details}
+Benefits: ${s.benefits}
+Eligibility: ${s.eligibility}
+Level: ${s.level}
+Category: ${s.schemeCategory}
+Tags: ${s.tags}
+`
+          )
+          .join("\n\n");
+
+        // 3️⃣ Ask the model to identify relevant slugs
+        const response = await fetch(
+          "https://openrouter.ai/api/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer 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`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "minimax/minimax-m2:free",
+              messages: [
+                {
+                  role: "system",
+                  content: `
+You are a government scheme recommender AI.
+Given a user query and a list of available schemes (with details and slugs),
+return the most relevant scheme slugs as a JSON array.
+
+Important:
+- Only return JSON, nothing else.
+- Format: {"matching_slugs": ["slug1", "slug2", "slug3"]}
+Schemes:
+${contextText}
+                `,
+                },
+                {
+                  role: "user",
+                  content: `User query: ${query}`,
+                },
+              ],
+            }),
+          }
+        );
+
+        const data = await response.json();
+const reply = data.choices?.[0]?.message?.content?.trim();
+
+// console.log("Model reply:", reply);
+
+// Safely parse JSON returned by model
+let parsedSlugs = [];
+try {
+  const parsed = JSON.parse(reply);
+  parsedSlugs = parsed.matching_slugs || [];
+} catch (e) {
+  console.error("Failed to parse model reply:", e);
+}
+
+// Now use the parsed slugs to fetch from DB
+// const schemesData = await Scheme.find({
+//   slug: { $in: parsedSlugs },
+// });
+
+const ids = (
+  await Scheme.find(
+    { slug: { $in: parsedSlugs } }, // filter by slugs
+    { _id: 1 }                      // only return _id field
+  )
+).map((scheme) => scheme._id.toString()); // convert ObjectId → string
+
+
+res.json({
+  query,
+  matching_slugs: parsedSlugs,
+  Id: ids,
+});
+
+      });
+  } catch (err) {
+    console.error(err);
+    res
+      .status(500)
+      .json({ message: "Error processing schemes", error: err.message });
+  }
+};
+
 const addSingleEntry = async (req, res) => {
   try {
     // Create a new Scheme document from request body
@@ -75,12 +215,12 @@ const translateText = async (text) => {
   const trans_text = await res.json();
   return trans_text.translatedText;
 
-  console.log("->", await res.json());
+  // console.log("->", await res.json());
 };
 
 const test_translate = async (req, res) => {
   const data = await translateText("hello");
-  console.log(await data);
+  // console.log(await data);
   res.send("ok");
 };
 
@@ -212,7 +352,7 @@ const getDashboardData = async (req, res) => {
       });
       all.push(element._id.toString());
     });
-    console.log(category);
+    // console.log(category);
 
     res.json({
       all,
@@ -283,4 +423,5 @@ module.exports = {
   getDashboardData,
   getSchemes,
   getSchemeBySlug,
+  searchSchemes,
 };

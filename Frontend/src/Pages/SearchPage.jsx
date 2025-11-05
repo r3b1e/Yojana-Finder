@@ -108,6 +108,7 @@ export function SearchPage() {
   const fromFeaturedCategory = location.state?.categorySelected
   const [filters, setFilters] = useState({
     search: "",
+    searchArray: [],
     categories: fromFeaturedCategory ? [fromFeaturedCategory] : [],
     tags: [],
     level: [],
@@ -143,7 +144,7 @@ export function SearchPage() {
             }
         );
         
-        console.log(res.data, "this is response");
+        // console.log(res.data, "this is response");
         setActualSchemes(res.data);
 
     } catch(error) {
@@ -152,7 +153,7 @@ export function SearchPage() {
   }
 
   useEffect(() => {
-    console.log(filteredSchemes)
+    // console.log(filteredSchemes)
     fetchSchemes()
   }, [filteredSchemes, page])
 
@@ -198,6 +199,14 @@ export function SearchPage() {
     //Mycode ===================================================================
     let filteredArray = [...allCategoryData["all"]];
 
+    console.log("-----------------[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[", filters);
+
+    if (filters.searchArray.length > 0) {
+      // console.log("running -------------------------------------------")
+      const searchTerm = filters.search.toLowerCase();
+      filteredArray = [...filters.searchArray]
+    }
+
     if(filters.categories.length > 0){
       filters.categories.forEach((element) => {
         const requiredScheme = allCategoryData.category[element].filter((schemeId) => filteredArray.includes(schemeId));
@@ -220,6 +229,12 @@ export function SearchPage() {
     }
 
     const set = new Set(filteredArray);
+
+    if(filters.searchArray && filters.searchArray.length > 0){
+      filters.searchArray.forEach((ele) => {
+        set.add(ele);
+      })
+    }
 
     if (filters.categories && filters.categories.length > 0) {
         filters.categories.forEach((element) => {

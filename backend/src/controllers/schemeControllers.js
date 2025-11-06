@@ -72,7 +72,7 @@ Tags: ${s.tags}
           {
             method: "POST",
             headers: {
-              Authorization: `Bearer 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`,
+              Authorization: `Bearer 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`,
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
@@ -102,6 +102,8 @@ ${contextText}
         );
 
         const data = await response.json();
+        console.log("Raw model response:", data);
+
 const reply = data.choices?.[0]?.message?.content?.trim();
 
 // console.log("Model reply:", reply);

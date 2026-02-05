@@ -418,6 +418,69 @@ const getSchemeBySlug = async (req, res) => {
   }
 };
 
+const agricultureSchemes = async (req, res) => {
+  try {
+    const agriSchemeIds = [
+      "68d80382b0a881721ee22b24",
+      "68d8eeee08fef1dd950a87e5",
+      "68d8eeee08fef1dd950a87e9",
+      "68d8eeee08fef1dd950a87f0",
+      "68d90178b6692fb8cdba9846",
+      "68d90178b6692fb8cdba9847",
+      "68d90178b6692fb8cdba9850",
+      "68d90178b6692fb8cdba9851",
+      "68d90178b6692fb8cdba9856",
+      "68d90178b6692fb8cdba9857",
+      "68d90178b6692fb8cdba9861",
+      "68d90178b6692fb8cdba9862",
+      "68d90178b6692fb8cdba9865",
+      "68d90178b6692fb8cdba9867",
+      "68d90178b6692fb8cdba9869",
+      "690b163e960d1cc61c268142",
+      "690b163e960d1cc61c268141",
+      "690b163e960d1cc61c268144",
+      "690b163e960d1cc61c268143",
+      "690b163e960d1cc61c268145",
+      "690b1795960d1cc61c268162",
+      "690b1c29960d1cc61c2681a7",
+      "690b1c29960d1cc61c268193",
+      "690b1c29960d1cc61c2681a5",
+      "690b29339d500ca4f6e9ca4c",
+      "690b29339d500ca4f6e9ca4f",
+      "690b29339d500ca4f6e9ca4d",
+      "690b29339d500ca4f6e9ca47",
+      "690b29339d500ca4f6e9ca4b",
+      "690b29339d500ca4f6e9ca44",
+      "690b29339d500ca4f6e9ca45",
+      "690b29339d500ca4f6e9ca48",
+      "690b29339d500ca4f6e9ca4a",
+      "690b29339d500ca4f6e9ca4e",
+      "690b29339d500ca4f6e9ca46",
+      "690b29339d500ca4f6e9ca5a"
+    ];
+
+    // 🔹 Convert string IDs to ObjectId
+    const objectIds = agriSchemeIds.map(id => new mongoose.Types.ObjectId(id));
+
+    // 🔹 Fetch only those schemes
+    const schemes = await Scheme.find({
+      _id: { $in: objectIds }
+    });
+
+    res.status(200).json({
+      count: schemes.length,
+      schemes
+    });
+
+  } catch (error) {
+    console.error("Error fetching agriculture schemes:", error);
+    res.status(500).json({
+      message: "Failed to fetch agriculture schemes",
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   addSingleEntry,
   insertFromCsv,
@@ -426,4 +489,5 @@ module.exports = {
   getSchemes,
   getSchemeBySlug,
   searchSchemes,
+  agricultureSchemes
 };
